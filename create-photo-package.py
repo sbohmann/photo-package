@@ -2,8 +2,10 @@
 import json
 import sys
 from datetime import datetime
+import os
 
 import iso_datetime
+import unique_filename
 
 
 class PhotoPackage:
@@ -11,26 +13,40 @@ class PhotoPackage:
         self._fetch_path()
         self._read_assets()
         self._filter_assets()
+        self._unique_filename_creator = unique_filename.Creator()
 
     def _fetch_path(self):
         if len(sys.argv) != 4:
-            print('Syntax: photo-package <path to assets json file> '
+            print('Syntax: photo-package <path to backup> '
                   '<inclusive UTC start timestamp> '
                   '<exclusive UTC end timestamp>')
             exit(1)
-        self._path = sys.argv[1]
+        self._backup_path = sys.argv[1]
         self._start_timestamp = iso_datetime.parse(sys.argv[2])
         self._end_timestamp = iso_datetime.parse(sys.argv[3])
 
     def _read_assets(self):
-        with open(self._path) as file:
-            self._assets = json.load(file)['assets']
+        assets_path = os.path.join(self._backup_path, 'assets', 'assets.json')
+        with open(assets_path) as file:
+            file_content = json.load(file)
+            self._assets = file_content['assets']
 
     def _filter_assets(self):
+        resource_directory_path = os.path.join(self._backup_path, 'resources')
+        package_directory_path = os.path.join(os.getcwd(), 'package')
         for asset in self._assets:
             asset_creation_timestamp = self._determine_asset_creation_timestamp(asset)
             if self._is_relevant_creation_timstamp(asset_creation_timestamp):
-                print(asset)
+                print(asset['name'])
+                print(asset_creation_timestamp)
+                for resource in asset['resourceDescriptions']:
+                    print('    ' + resource['checksum'])
+                    print('    ' + resource['name'])
+                    print('    ' + str(resource['size']) + ' bytes')
+                    resource_path = os.path.join(resource_directory_path, resource['checksum'])
+                    link_path = os.path.join(package_directory_path, unique_filename)
+                    os.symlink()
+
 
     def _determine_asset_creation_timestamp(self, asset):
         raw_asset_creation_timestamp = asset['creationDateMs']
